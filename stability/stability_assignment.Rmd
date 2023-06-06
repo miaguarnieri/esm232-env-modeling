@@ -9,22 +9,49 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## R Markdown
-
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r cars}
-summary(cars)
+Packages
+```{r}
+library(here)
+library(tidyverse)
 ```
 
-## Including Plots
-
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
+Source function
+```{r}
+source(here("stability", "lotvmodK.R"))
+source(here("stability", "lotvmodK_try2.R"))
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+Test the function
+```{r}
+# given some characteristics - lets look at derivatives under different harvest rates
+pars = list(rprey=0.95, alpha=0.01, eff=0.6,pmort=0.4, K=2000, harvest = 20)
+pop = list(prey = 100, pred = 10)
+# look at the derivative over a range of forest sizes
+findstable = data.frame(thresh=seq(from=0, to=1, by=0.05))
+# notice use of Time=NULL, and map to compute derivative
+# for different values of forest biomass
+findstable$dervHlow = unlist(findstable$thresh %>% map(~lotvmodK(pars=pars, t=NULL, pop=pop, thresh = .x)))
+                                                  
+ggplot(findstable, aes(Ccurr, dervHlow))+geom_point()+geom_hline(yintercept = 0, col="red")+
+  labs(y="Derivative\n (Rate of change of forest carbon) (kg/C/year)", x="Current Forest Carbon Stock (kgC)")
+```
+
+```{r}
+findstable = data.frame(harvest=seq(from=0, to=100, by=5))
+
+```
+
+Test the function (try 2)
+```{r}
+# given some characteristics - lets look at derivatives under different harvest rates
+pars = list(rprey=0.95, alpha=0.01, eff=0.6,pmort=0.4, K=2000, harvest = 20)
+pop = list(prey = 100, pred = 10)
+# look at the derivative over a range of forest sizes
+findstable = data.frame(thresh=seq(from=0, to=1, by=0.05))
+# notice use of Time=NULL, and map to compute derivative
+# for different values of forest biomass
+findstable$dervHlow = unlist(findstable$thresh %>% map(~lotvmodK_try2(pars=pars, t=NULL, pop=pop, thresh = .x)))
+                                                  
+ggplot(findstable, aes(Ccurr, dervHlow))+geom_point()+geom_hline(yintercept = 0, col="red")+
+  labs(y="Derivative\n (Rate of change of forest carbon) (kg/C/year)", x="Current Forest Carbon Stock (kgC)")
+```
