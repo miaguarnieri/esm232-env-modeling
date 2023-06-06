@@ -27,13 +27,12 @@ Test the function
 pars = list(rprey=0.95, alpha=0.01, eff=0.6,pmort=0.4, K=2000, harvest = 20)
 pop = list(prey = 100, pred = 10)
 # look at the derivative over a range of forest sizes
-findstable = data.frame(thresh=seq(from=0, to=1, by=0.05))
+findstable = data.frame(thresh=seq(from=10, to=150, by=1))
 # notice use of Time=NULL, and map to compute derivative
 # for different values of forest biomass
-findstable$dervHlow = unlist(findstable$thresh %>% map(~lotvmodK(pars=pars, t=NULL, pop=pop, thresh = .x)))
-                                                  
-ggplot(findstable, aes(Ccurr, dervHlow))+geom_point()+geom_hline(yintercept = 0, col="red")+
-  labs(y="Derivative\n (Rate of change of forest carbon) (kg/C/year)", x="Current Forest Carbon Stock (kgC)")
+findstable$dprey = unlist(findstable$thresh %>% map(~lotvmodK(pars=pars, t=NULL, pop=pop, thresh = .x)))[[1]]
+
+findstable$dpred = unlist(findstable$thresh %>% map(~lotvmodK(pars=pars, t=NULL, pop=pop, thresh = .x)))[[2]]
 ```
 
 ```{r}
