@@ -22,14 +22,15 @@
 #' \item{dpred}{rate of change of preditor populutation}
 #'}
 
-lotvmodK = function(t, pop, pars, thresh) {
-  with(as.list(c(pars,pop, findstable)), {
-    ifelse(prey > thresh, 
-           dprey = (rprey*(1-prey/K)*prey -  alpha*prey*pred) - harvest, 
-           dprey = (rprey*(1-prey/K)*prey -  alpha*prey*pred))
-    dpred = eff*alpha*prey*pred - pmort*pred
-    return(list(c(dprey,dpred)))})
-}
+lotvmodK_try2 = function(t, pop, pars, thresh) {
+  
+  dprey <- ifelse(pop$prey > thresh, 
+                  (pars$rprey*(1-pop$prey/pars$K)*pop$prey -  pars$alpha*pop$prey*pars$pred) - pars$harvest, 
+                  pars$rprey*(1-pop$prey/pars$K)*pop$prey -  pars$alpha*pop$prey*pars$pred)
+  
+  dpred = pars$eff*pars$alpha*pop$prey*pop$pred - pars$pmort*pop$pred
+  
+  return(list(c(dprey,dpred)))}
 
 
 
