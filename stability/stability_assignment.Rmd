@@ -21,6 +21,8 @@ source(here("stability", "lotvmodK.R"))
 source(here("stability", "lotvmodK_try2.R"))
 ```
 
+Definition of stability: a population that has a positive or 0 derivative (growth) and has a population size above or equal to the initial population size after 10 years
+
 Test the function
 ```{r}
 # given some characteristics - lets look at derivatives under different harvest rates
@@ -33,6 +35,10 @@ findstable = data.frame(thresh=seq(from=10, to=150, by=1))
 findstable$dprey = unlist(findstable$thresh %>% map(~lotvmodK(pars=pars, t=NULL, pop=pop, thresh = .x)))[[1]]
 
 findstable$dpred = unlist(findstable$thresh %>% map(~lotvmodK(pars=pars, t=NULL, pop=pop, thresh = .x)))[[2]]
+
+# test out min and max in function
+lotvmodK(pars=pars, t=NULL, pop=pop, thresh = min(findstable))
+lotvmodK(pars=pars, t=NULL, pop=pop, thresh = max(findstable))
 ```
 
 ```{r}
