@@ -18,7 +18,6 @@ library(tidyverse)
 Source function
 ```{r}
 source(here("stability", "lotvmodK.R"))
-source(here("stability", "lotvmodK_try2.R"))
 ```
 
 Test the function
@@ -42,19 +41,17 @@ findstable = data.frame(harvest=seq(from=0, to=100, by=5))
 
 Test the function (try 2)
 ```{r}
-source(here("stability", "lotvmodK_try2.R"))
-
 # given some characteristics - lets look at derivatives under different harvest rates
 pars = list(rprey=0.95, alpha=0.01, eff=0.6,pmort=0.4, K=2000, harvest = 20)
 pop = list(prey = 100, pred = 10)
 # look at the derivative over a range of forest sizes
+findstable = data.frame(thresh=seq(from=10, to=150, by=1))
 
-findstable = data.frame(thresh=seq(from=10, to=100, by=1))
+days <- seq(from = 1, to = 30)
+
 # notice use of Time=NULL, and map to compute derivative
 # for different values of forest biomass
+findstable$dprey = unlist(findstable$thresh %>% map(~lotvmodK(pars=pars, t=days, pop=pop, thresh = .x)))[[1]]
 
-results <- findstable$thresh %>% 
-                    map(~lotvmodK_try2(pars=pars, t=NULL, pop=pop, thresh = .x))
-
-results_df
+findstable$dpred = unlist(findstable$thresh %>% map(~lotvmodK(pars=pars, t=days, pop=pop, thresh = .x)))[[2]]
 ```
