@@ -23,8 +23,8 @@
 #'}
 
 lotvmodK = function(t, pop, pars, thresh) {
-with(as.list(c(pars, pop)), {
-if(prey > thresh){dprey = ((rprey*(1-prey/K)*prey -  alpha*prey*pred) - harvest)}
+with(as.list(c(pars, pop, thresh)), {
+if(prey > thresh){dprey = ((rprey*(1-prey/K)*prey -  alpha*prey*pred) - harvest*prey)}
   else(dprey = (rprey*(1-prey/K)*prey -  alpha*prey*pred))
 dpred = eff*alpha*prey*pred - pmort*pred
 return(list(c(dprey,dpred)))})

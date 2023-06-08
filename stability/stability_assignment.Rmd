@@ -95,5 +95,42 @@ res_stablestart = as.data.frame(res) %>% gather(key="animal", value="pop",-time)
 p2=ggplot(res_stablestart, aes(time, pop, col=animal))+geom_line()
 p2
 
-# explore with some different parameters
+
+
+#use a wrapper function with pmap
+
+#threshold and harvest lists
+thresh <- seq(from = 10, to = 150, by = 1)
+harvest_l <- seq(from = 0.05, to = 0.25, by = 0.01)
+
+# times when you want to evaluate
+times <- seq(from=1, to=200)
+
+
+h_wrapper <- function(t, pop, pars, func, thresh) {
+    pars <- list(rprey=0.95, alpha=0.01, eff=0.6,pmort=0.4, K=2000, harvest = 0.10, thresh = thresh)
+    
+    #setting initial population values
+    predi <- with(pars, pmort/(eff*alpha)) 
+    preyi <- with(pars, rprey/alpha*(1-preyi/K))
+    pop <- c(prey = as.integer(preyi), pred = as.integer(predi))
+    
+    #run the ode solver
+    result <- ode(y = pop, times = times, func = func, parms = pars) 
+  
+    #turn into dataframe and get max value
+    result <- as.data.frame(result)
+    colnames(result) = c("time", "prey", "pred")
+    final_pop <- tail(result, n = 1)
+    
+    return(final_pop)
+}
+
+#use pmap to apply wrapper to all parameter sets
+
+times <- 1:200
+
+allresults <- as.data.frame(thresh) %>% 
+  pmap(h_wrapper, pop = pop, t = times, pars = pars, func = lotvmodK, thresh = .x)
+
 ```
