@@ -100,20 +100,15 @@ p2
 #use a wrapper function with pmap
 
 #threshold and harvest lists
-thresh <- seq(from = 10, to = 150, by = 1)
+thresh_l <- seq(from = 10, to = 150, by = 1)
 harvest_l <- seq(from = 0.05, to = 0.25, by = 0.01)
 
 # times when you want to evaluate
 times <- seq(from=1, to=200)
 
 
-h_wrapper <- function(t, pop, pars, func, thresh) {
-    pars <- list(rprey=0.95, alpha=0.01, eff=0.6,pmort=0.4, K=2000, harvest = 0.10, thresh = thresh)
-    
-    #setting initial population values
-    predi <- with(pars, pmort/(eff*alpha)) 
-    preyi <- with(pars, rprey/alpha*(1-preyi/K))
-    pop <- c(prey = as.integer(preyi), pred = as.integer(predi))
+h_wrapper <- function(t, func, pop, rprey, alpha, eff, pmort, K, harvest, thresh) {
+    pars <- list(rprey=rprey, alpha=alpha, eff=eff, pmort=pmort, K=K, harvest = harvest, thresh = thresh)
     
     #run the ode solver
     result <- ode(y = pop, times = times, func = func, parms = pars) 
@@ -130,7 +125,16 @@ h_wrapper <- function(t, pop, pars, func, thresh) {
 
 times <- 1:200
 
-allresults <- as.data.frame(thresh) %>% 
-  pmap(h_wrapper, pop = pop, t = times, pars = pars, func = lotvmodK, thresh = .x)
+pars_l <- list(rprey=0.95, alpha=0.01, eff=0.6,pmort=0.4, K=2000, harvest = 0.10, thresh = thresh_l)
+
+pars_df <- as.data.frame(pars_l)
+
+#setting initial population values
+predi <- with(pars_l, pmort/(eff*alpha))
+preyi <- with(pars_l, rprey/alpha*(1-predi/K))
+pop <- c(prey = as.integer(preyi), pred = as.integer(predi))
+
+all_results <- pars_df %>% 
+  pmap(h_wrapper, t = times, func = lotvmodK, pop = pop)
 
 ```

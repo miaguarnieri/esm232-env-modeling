@@ -22,8 +22,8 @@
 #' \item{dpred}{rate of change of preditor populutation}
 #'}
 
-lotvmodK = function(t, pop, pars, thresh) {
-with(as.list(c(pars, pop, thresh)), {
+lotvmodK = function(t, pop, pars) {
+with(as.list(c(pars, pop)), {
 if(prey > thresh){dprey = ((rprey*(1-prey/K)*prey -  alpha*prey*pred) - harvest*prey)}
   else(dprey = (rprey*(1-prey/K)*prey -  alpha*prey*pred))
 dpred = eff*alpha*prey*pred - pmort*pred
