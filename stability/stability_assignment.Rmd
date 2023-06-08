@@ -13,6 +13,7 @@ Packages
 ```{r}
 library(here)
 library(tidyverse)
+library(deSolve)
 ```
 
 Source function
@@ -27,8 +28,9 @@ Test the function
 # given some characteristics - lets look at derivatives under different harvest rates
 pars = list(rprey=0.95, alpha=0.01, eff=0.6,pmort=0.4, K=2000, harvest = 20)
 pop = list(prey = 100, pred = 10)
-# look at the derivative over a range of forest sizes
+# look at the derivative over a range of harvest thresholds
 findstable = data.frame(thresh=seq(from=10, to=150, by=1))
+
 # notice use of Time=NULL, and map to compute derivative
 # for different values of forest biomass
 findstable$dprey = unlist(findstable$thresh %>% map(~lotvmodK(pars=pars, t=NULL, pop=pop, thresh = .x)))[[1]]
@@ -45,19 +47,53 @@ findstable = data.frame(harvest=seq(from=0, to=100, by=5))
 
 ```
 
-Test the function (try 2)
+Test the function over time (varied harvest)
+
 ```{r}
+# set parameter list
 # given some characteristics - lets look at derivatives under different harvest rates
 pars = list(rprey=0.95, alpha=0.01, eff=0.6,pmort=0.4, K=2000, harvest = 20)
-pop = list(prey = 100, pred = 10)
-# look at the derivative over a range of forest sizes
-findstable = data.frame(thresh=seq(from=10, to=150, by=1))
 
-days <- seq(from = 1, to = 30)
+# now lets try initial conditions that will be stable
+predi = with(pars, pmort/(eff*alpha)) 
 
-# notice use of Time=NULL, and map to compute derivative
-# for different values of forest biomass
-findstable$dprey = unlist(findstable$thresh %>% map(~lotvmodK(pars=pars, t=days, pop=pop, thresh = .x)))[[1]]
+preyi = with(pars, rprey/alpha*(1-preyi/K)) 
 
-findstable$dpred = unlist(findstable$thresh %>% map(~lotvmodK(pars=pars, t=days, pop=pop, thresh = .x)))[[2]]
+pop = c(prey = as.integer(preyi), pred = as.integer(predi))
+
+# times when you want to evaluate
+days = seq(from=1, to=100)
+
+# look at the derivative over a range of harvest thresholds
+thresh_df<- data.frame(thresh = seq(from=10, to=150, by=1))
+
+# run our differential equation solver
+results <- thresh_df$thresh %>% 
+                map(~ode(func=lotvmodK, y = pop, times=days, parms=pars, thresh = .x))
+
+restest <- ode(func=lotvmodK, y = pop, times=days, parms=pars, thresh = 50)
+
+final_pop <- as.data.frame(unlist(sapply(results, \(x) tail(x[x != ""], 1))))
+
+final_pop <- sapply(results, tail, 1)
+
+# extract the results
+res_stablestart = as.data.frame(res) %>% 
+  gather(key="animal", value="pop",-time)
+
+
+# graph both populations over time
+p1=ggplot(res_smallstart, aes(time, pop, col=animal))+geom_line()
+p1
+
+# lets first see what happens when we start our estimates of stable populations
+stablepop = c(prey=preyi, pred=predi)
+res = ode(func=lotvmodK, y=stablepop, times=days, parms=pars)
+# estract the results
+res_stablestart = as.data.frame(res) %>% gather(key="animal", value="pop",-time)
+# graph both populations over time
+p2=ggplot(res_stablestart, aes(time, pop, col=animal))+geom_line()
+p2
+
+# explore with some different parameters
 ```
