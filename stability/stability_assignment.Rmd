@@ -137,4 +137,5 @@ pop <- c(prey = as.integer(preyi), pred = as.integer(predi))
 all_results <- pars_df %>% 
   pmap(h_wrapper, t = times, func = lotvmodK, pop = pop)
 
+all_results_df <- dplyr::bind_rows(all_results, .id = "time")
 ```
