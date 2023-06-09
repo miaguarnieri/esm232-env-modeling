@@ -2,7 +2,14 @@
 title: "Stability Assignment"
 author: "Mia Guarnieri, Lauren Harris"
 date: "2023-06-08"
-output: html_document
+output:
+  html_document:
+    toc: yes
+    toc_float: yes
+    theme: paper
+    code_folding: hide
+    smooth_scroll: yes
+    collapsed: yes
 ---
 
 ```{r setup, include=FALSE}
@@ -16,102 +23,28 @@ library(tidyverse)
 library(deSolve)
 ```
 
-Source function
+
+## Test the function
+
+Definition of stability: a population that has a predator population size within 30% of the prey population size after 250 time steps.
+
+## Varied hunting threshold
+
 ```{r}
+#source function
 source(here("stability", "lotvmodK.R"))
-```
-
-Definition of stability: a population that has a positive or 0 derivative (growth) and has a population size above or equal to the initial population size after 10 years
-
-Test the function
-```{r}
-# given some characteristics - lets look at derivatives under different harvest rates
-pars = list(rprey=0.95, alpha=0.01, eff=0.6,pmort=0.4, K=2000, harvest = 20)
-pop = list(prey = 100, pred = 10)
-# look at the derivative over a range of harvest thresholds
-findstable = data.frame(thresh=seq(from=10, to=150, by=1))
-
-# notice use of Time=NULL, and map to compute derivative
-# for different values of forest biomass
-findstable$dprey = unlist(findstable$thresh %>% map(~lotvmodK(pars=pars, t=NULL, pop=pop, thresh = .x)))[[1]]
-
-findstable$dpred = unlist(findstable$thresh %>% map(~lotvmodK(pars=pars, t=NULL, pop=pop, thresh = .x)))[[2]]
-
-# test out min and max in function
-lotvmodK(pars=pars, t=NULL, pop=pop, thresh = min(findstable))
-lotvmodK(pars=pars, t=NULL, pop=pop, thresh = max(findstable))
-```
-
-```{r}
-findstable = data.frame(harvest=seq(from=0, to=100, by=5))
-
-```
-
-Test the function over time (varied harvest)
-
-```{r}
-# set parameter list
-# given some characteristics - lets look at derivatives under different harvest rates
-pars = list(rprey=0.95, alpha=0.01, eff=0.6,pmort=0.4, K=2000, harvest = 20)
-
-# now lets try initial conditions that will be stable
-predi = with(pars, pmort/(eff*alpha)) 
-
-preyi = with(pars, rprey/alpha*(1-preyi/K)) 
-
-pop = c(prey = as.integer(preyi), pred = as.integer(predi))
-
-# times when you want to evaluate
-days = seq(from=1, to=100)
-
-# look at the derivative over a range of harvest thresholds
-thresh_df<- data.frame(thresh = seq(from=10, to=150, by=1))
-
-# run our differential equation solver
-results <- thresh_df$thresh %>% 
-                map(~ode(func=lotvmodK, y = pop, times=days, parms=pars, thresh = .x))
-
-restest <- ode(func=lotvmodK, y = pop, times=days, parms=pars, thresh = 50)
-
-final_pop <- as.data.frame(unlist(sapply(results, \(x) tail(x[x != ""], 1))))
-
-final_pop <- sapply(results, tail, 1)
-
-# extract the results
-res_stablestart = as.data.frame(res) %>% 
-  gather(key="animal", value="pop",-time)
-
-
-# graph both populations over time
-p1=ggplot(res_smallstart, aes(time, pop, col=animal))+geom_line()
-p1
-
-# lets first see what happens when we start our estimates of stable populations
-stablepop = c(prey=preyi, pred=predi)
-res = ode(func=lotvmodK, y=stablepop, times=days, parms=pars)
-# estract the results
-res_stablestart = as.data.frame(res) %>% gather(key="animal", value="pop",-time)
-# graph both populations over time
-p2=ggplot(res_stablestart, aes(time, pop, col=animal))+geom_line()
-p2
-
-
 
 #use a wrapper function with pmap
 
-#threshold and harvest lists
+#threshold list
 thresh_l <- seq(from = 10, to = 150, by = 1)
-harvest_l <- seq(from = 0.05, to = 0.25, by = 0.01)
 
-# times when you want to evaluate
-times <- seq(from=1, to=200)
-
-
+#wrapper function
 h_wrapper <- function(t, func, pop, rprey, alpha, eff, pmort, K, harvest, thresh) {
     pars <- list(rprey=rprey, alpha=alpha, eff=eff, pmort=pmort, K=K, harvest = harvest, thresh = thresh)
     
     #run the ode solver
-    result <- ode(y = pop, times = times, func = func, parms = pars) 
+    result <- ode(y = pop, times = times, func = func, parms = pars, maxsteps = 500000) 
   
     #turn into dataframe and get max value
     result <- as.data.frame(result)
@@ -123,9 +56,9 @@ h_wrapper <- function(t, func, pop, rprey, alpha, eff, pmort, K, harvest, thresh
 
 #use pmap to apply wrapper to all parameter sets
 
-times <- 1:200
+times <- 1:250
 
-pars_l <- list(rprey=0.95, alpha=0.01, eff=0.6,pmort=0.4, K=2000, harvest = 0.10, thresh = thresh_l)
+pars_l <- list(rprey=0.95, alpha=0.01, eff=0.6, pmort=0.4, K=2000, harvest = 0.10, thresh = thresh_l)
 
 pars_df <- as.data.frame(pars_l)
 
@@ -137,5 +70,67 @@ pop <- c(prey = as.integer(preyi), pred = as.integer(predi))
 all_results <- pars_df %>% 
   pmap(h_wrapper, t = times, func = lotvmodK, pop = pop)
 
-all_results_df <- dplyr::bind_rows(all_results, .id = "time")
+all_results_df <- dplyr::bind_rows(all_results, .id = "pars") %>% 
+  cbind(as.data.frame(thresh_l)) %>% 
+  filter(time == 250.00) %>% 
+  mutate(diff = ((abs(prey-pred))/prey),
+         stable = ifelse(diff < 0.3, "true", "false"))
 ```
+
+### Varied hunting
+
+```{r}
+#use a wrapper function with pmap
+
+#harvest list
+harvest_l <- seq(from = 0.05, to = 0.50, by = 0.01)
+
+#use pmap to apply wrapper to all parameter sets
+
+times <- 1:250
+
+pars_l_h <- list(rprey=0.95, alpha=0.01, eff=0.6, pmort=0.4, K=2000, harvest = harvest_l, thresh = 61)
+
+pars_df_h <- as.data.frame(pars_l_h)
+
+#setting initial population values
+predi <- with(pars_l, pmort/(eff*alpha))
+preyi <- with(pars_l, rprey/alpha*(1-predi/K))
+pop <- c(prey = as.integer(preyi), pred = as.integer(predi))
+
+all_results_h <- pars_df_h %>% 
+  pmap(h_wrapper, t = times, func = lotvmodK, pop = pop)
+
+all_results_df_h <- dplyr::bind_rows(all_results_h, .id = "pars") %>% 
+  cbind(as.data.frame(harvest_l)) %>% 
+  filter(time == 250.00) %>% 
+  mutate(diff = ((abs(prey-pred))/prey),
+         stable = ifelse(diff < 0.3, "true", "false"))
+```
+
+## Plot final ode run
+
+```{r}
+#setting initial population values
+predi <- with(pars_l, pmort/(eff*alpha))
+preyi <- with(pars_l, rprey/alpha*(1-predi/K))
+pop <- c(prey = as.integer(preyi), pred = as.integer(predi))
+
+#selected parameters
+pars_graph <- list(rprey=0.95, alpha=0.01, eff=0.6, pmort=0.4, K=2000, harvest = 0.13, thresh = 61)
+
+#run the ode
+graph_result <- ode(y = pop, times = times, func = lotvmodK, parms = pars_graph, maxsteps = 500000)
+
+plot_df <- as.data.frame(graph_result) %>% 
+  pivot_longer(-time, names_to = "animal", values_to = "pop")
+
+ggplot(plot_df, aes(time, pop, col=animal)) + 
+  geom_line() + 
+  labs(x = "Time (days)", 
+       y = "Population")
+```
+
+## Discussion
+
+Our goal was to prevent the predator population from being too much larger than the prey population in the ecosystem. Therefore, our stability metric is whether the predator population size is within 30% of the prey population size after 250 time steps, with the goal of keeping predator and prey sizes as close together as possible to ensure that both populations can remain stable. When we ran our ode solver, we determined that the ideal hunting threshold is 61 prey individuals; below this level, hunting should not occur. We also determined that the ideal hunting rate is 0.13, or 13% of the prey population. These were the variables that kept the predator and prey populations as close together as possible given the starting parameters.
