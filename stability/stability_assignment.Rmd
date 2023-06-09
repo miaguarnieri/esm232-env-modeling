@@ -4,8 +4,6 @@ author: "Mia Guarnieri, Lauren Harris"
 date: "2023-06-08"
 output:
   html_document:
-    toc: yes
-    toc_float: yes
     theme: paper
     code_folding: hide
     smooth_scroll: yes
@@ -14,10 +12,8 @@ output:
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-```
 
-Packages
-```{r}
+#attach packages
 library(here)
 library(tidyverse)
 library(deSolve)
@@ -32,7 +28,7 @@ Definition of stability: a population that has a predator population size within
 
 ```{r}
 #source function
-source(here("stability", "lotvmodK.R"))
+source(here("stability", "R", "lotvmodK.R"))
 
 #use a wrapper function with pmap
 
@@ -111,13 +107,16 @@ all_results_df_h <- dplyr::bind_rows(all_results_h, .id = "pars") %>%
 ## Plot final ode run
 
 ```{r}
-#setting initial population values
-predi <- with(pars_l, pmort/(eff*alpha))
-preyi <- with(pars_l, rprey/alpha*(1-predi/K))
-pop <- c(prey = as.integer(preyi), pred = as.integer(predi))
-
 #selected parameters
 pars_graph <- list(rprey=0.95, alpha=0.01, eff=0.6, pmort=0.4, K=2000, harvest = 0.13, thresh = 61)
+
+#setting initial population values
+predi <- with(pars_graph, pmort/(eff*alpha))
+preyi <- with(pars_graph, rprey/alpha*(1-predi/K))
+pop <- c(prey = as.integer(preyi), pred = as.integer(predi))
+
+#run times
+times <- 1:250
 
 #run the ode
 graph_result <- ode(y = pop, times = times, func = lotvmodK, parms = pars_graph, maxsteps = 500000)
